@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+        }
+
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background-color: #2C3E50;
+            color: white;
+            padding: 20px;
+            position: fixed;
+        }
+
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar ul li {
+            padding: 10px;
+            border-bottom: 1px solid #34495E;
+        }
+
+        .sidebar ul li a {
+            color: white;
+            text-decoration: none;
+            display: block;
+        }
+
+        .sidebar ul li a:hover {
+            background-color: #1A252F;
+            padding-left: 10px;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            width: calc(100% - 250px);
+            padding: 20px;
+        }
+
+        .navbar {
+            background-color: #2980B9;
+            color: white;
+            padding: 15px;
+            text-align: right;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .content {
+            margin-top: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+        }
+
+        .logout-btn {
+            background-color: #E74C3C;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .logout-btn:hover {
+            background-color: #C0392B;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Admin Panel</h2>
+        <ul>
+            <li><a href="#">Dashboard</a></li>
+            <li><a href="#">Users</a></li>
+            <li><a href="#">Settings</a></li>
+            <li><a href="#">Reports</a></li>
+            <li><a href="#" onclick="logout()">Logout</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Navbar -->
+        <div class="navbar">
+            <span id="username">Welcome, Admin</span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div class="content">
+            <div class="card">
+                <h3>Total Users</h3>
+                <p>150</p>
+            </div>
+            <div class="card">
+                <h3>Active Sessions</h3>
+                <p>30</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Keycloak -->
+    <script src="keycloak.js"></script>
+    <script>
+        // Initialize Keycloak
+        const keycloak = new Keycloak({
+            url: "http://localhost:8180/",
+            realm: "Page",
+            clientId: "page-app"
+        });
+
+        keycloak.init({ onLoad: 'login-required' })
+            .then(authenticated => {
+                if (authenticated) {
+                    console.log('✅ Authenticated!');
+                    document.getElementById("username").innerText = `Welcome, ${keycloak.tokenParsed.preferred_username}`;
+                } else {
+                    console.log('❌ Not authenticated');
+                }
+            })
+            .catch(error => console.error('⚠️ Failed to initialize Keycloak', error));
+
+        // Logout Function
+        function logout() {
+            keycloak.logout({ redirectUri: "http://localhost:5500/index.html" });
+        }
+    </script>
+
+</body>
+</html>
