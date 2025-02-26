@@ -1,19 +1,13 @@
-from sqlalchemy import Column, Integer, String, Boolean, create_engine
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker
+from databases import Database
 
-DATABASE_URL = "sqlite:///./todo.db"
+DATABASE_URL = "sqlite:///./todo.db"  # SQLite DB file
 
+# SQLAlchemy engine & metadata
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+metadata = MetaData()
+
+# Database connection
+database = Database(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base = declarative_base()
-
-class ToDo(Base):
-    __tablename__ = "todos"
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, index=True)
-    description = Column(String, nullable=True)
-    completed = Column(Boolean, default=False)
-
-Base.metadata.create_all(bind=engine)

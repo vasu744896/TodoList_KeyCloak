@@ -1,10 +1,13 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List
-from models import TokenResponse, UserInfo, ToDoItem
+
+from models import TokenResponse, UserInfo, ToDoItem, Todo
 from controller import AuthController
+from database import SessionLocal
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -20,6 +23,14 @@ app.add_middleware(
 
 # Authentication scheme
 bearer_scheme = HTTPBearer()
+
+# Dependency to get DB session
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # Root endpoint
 @app.get("/")
@@ -49,13 +60,13 @@ async def protected_endpoint(credentials: HTTPAuthorizationCredentials = Depends
 
 # Get all ToDo items for the authenticated user
 @app.get("/todos", response_model=List[ToDoItem])
-async def get_todos(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+async def get_todos(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme), db: Session = Depends(get_db)):
     user = AuthController.protected_endpoint(credentials)  # Verify user
     if not user:
         raise HTTPException(status_code=401, detail="Invalid user credentials")
     
-    todos = AuthController.get_todos(user)
-    if todos is None:
+    todos = db.query(Todo).filter(Todo.user_id == user.preferred_username).all()
+    if not todos:
         raise HTTPException(status_code=404, detail="No ToDo items found")
     
     return todos
@@ -65,26 +76,30 @@ class TodoRequest(BaseModel):
     task: str
 
 @app.post("/todos", response_model=ToDoItem)
-async def add_todo(request: TodoRequest, credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+async def add_todo(request: TodoRequest, credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme), db: Session = Depends(get_db)):
     user = AuthController.protected_endpoint(credentials)  # Verify user
     if not user:
         raise HTTPException(status_code=401, detail="Invalid user credentials")
-    
-    new_todo = AuthController.add_todo(user, request.task)
-    if not new_todo:
-        raise HTTPException(status_code=400, detail="Failed to add ToDo item")
+
+    new_todo = Todo(title=request.task, user_id=user.preferred_username)
+    db.add(new_todo)
+    db.commit()
+    db.refresh(new_todo)
     
     return new_todo
 
 # Delete a ToDo item
 @app.delete("/todos/{todo_id}")
-async def delete_todo(todo_id: int, credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+async def delete_todo(todo_id: int, credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme), db: Session = Depends(get_db)):
     user = AuthController.protected_endpoint(credentials)  # Verify user
     if not user:
         raise HTTPException(status_code=401, detail="Invalid user credentials")
     
-    success = AuthController.delete_todo(user, todo_id)
-    if not success:
+    todo = db.query(Todo).filter(Todo.id == todo_id, Todo.user_id == user.preferred_username).first()
+    if not todo:
         raise HTTPException(status_code=404, detail="ToDo item not found")
+    
+    db.delete(todo)
+    db.commit()
     
     return {"message": "ToDo item deleted successfully"}
