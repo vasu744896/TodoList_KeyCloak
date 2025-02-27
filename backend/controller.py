@@ -2,10 +2,10 @@ from fastapi import Depends, HTTPException, status, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from models import TokenResponse, UserInfo, ToDoItem
 from service import AuthService
+from typing import List
 
 # Initialize HTTPBearer security dependency
 bearer_scheme = HTTPBearer()
-
 
 class AuthController:
     """
@@ -89,13 +89,16 @@ class AuthController:
         return user_info
 
     @staticmethod
-    def add_todo(user: UserInfo, task: str) -> ToDoItem:
+    def add_todo(
+        task: str = Form(...),
+        user: UserInfo = Depends(protected_endpoint),
+    ) -> ToDoItem:
         """
         Add a new ToDo item.
 
         Args:
-            user (UserInfo): The authenticated user's information.
             task (str): The task description.
+            user (UserInfo): The authenticated user's information.
 
         Returns:
             ToDoItem: The created ToDo item.
@@ -110,7 +113,7 @@ class AuthController:
         return new_todo
 
     @staticmethod
-    def get_todos(user: UserInfo):
+    def get_todos(user: UserInfo = Depends(protected_endpoint)) -> List[ToDoItem]:
         """
         Retrieve all ToDo items for the authenticated user.
 
@@ -123,13 +126,16 @@ class AuthController:
         return [todo for todo in AuthController.todos if todo.username == user.preferred_username]
 
     @staticmethod
-    def delete_todo(user: UserInfo, todo_id: int):
+    def delete_todo(
+        todo_id: int,
+        user: UserInfo = Depends(protected_endpoint),
+    ):
         """
         Delete a ToDo item for the authenticated user.
 
         Args:
-            user (UserInfo): The authenticated user's information.
             todo_id (int): The ID of the ToDo item to delete.
+            user (UserInfo): The authenticated user's information.
 
         Raises:
             HTTPException: If the ToDo item is not found.

@@ -1,78 +1,110 @@
 import axios from "axios";
 import { getToken } from "./auth";
 
-const API_BASE_URL = "http://127.0.0.1:8000"; // FastAPI backend URL
+const API_BASE_URL = "http://127.0.0.1:8000"; // Your FastAPI backend URL
 
 // Fetch all To-Do items
 export const fetchTodos = async () => {
     try {
+        const token = getToken();
+        if (!token) {
+            console.error("❌ No token found. User might not be authenticated.");
+            return [];
+        }
+
+        console.log("📡 Fetching todos with token:", token);
+
         const response = await axios.get(`${API_BASE_URL}/todos`, {
-            headers: { Authorization: `Bearer ${getToken()}` }
+            headers: { Authorization: `Bearer ${token}` }
         });
 
-        // Map API response to match frontend expectations
-        return response.data.map(todo => ({
-            id: todo.id,
-            task: todo.title, // Mapping 'title' to 'task'
-            assigned_to: todo.user_id, // Mapping 'user_id' to 'assigned_to'
-            completed: todo.completed
-        }));
-
+        console.log("✅ Fetched todos:", response.data);
+        return response.data;
     } catch (error) {
-        console.error("Error fetching todos:", error.response?.data || error.message);
+        console.error("❌ Error fetching todos:", error.response?.data || error.message);
         return [];
     }
 };
 
-// Add a new To-Do item (Only for Admins)
-export const addTodo = async (task, assignedTo) => {
+// Add a new To-Do item
+export const addTodo = async (title) => {
     try {
+        const token = getToken();
+        if (!token) {
+            console.error("❌ No token found. Cannot add todo.");
+            return null;
+        }
+
+        console.log("📝 Adding todo with token:", token, "Title:", title);
+
         const response = await axios.post(
             `${API_BASE_URL}/todos`,
-            { title: task, user_id: assignedTo }, // Ensure correct JSON format
+            { title },
             {
                 headers: {
-                    Authorization: `Bearer ${getToken()}`,
+                    Authorization: `Bearer ${token}`,
                     "Content-Type": "application/json"
                 }
             }
         );
+
+        console.log("✅ Added todo:", response.data);
         return response.data;
     } catch (error) {
-        console.error("Error adding todo:", error.response?.data || error.message);
+        console.error("❌ Error adding todo:", error.response?.data || error.message);
         return null;
     }
 };
 
-// Delete a To-Do item (Only for Admins)
-export const deleteTodo = async (id) => {
+// Update a To-Do item
+export const updateTodo = async (id, completed) => {
     try {
-        await axios.delete(`${API_BASE_URL}/todos/${id}`, {
-            headers: { Authorization: `Bearer ${getToken()}` }
-        });
-        return true;
-    } catch (error) {
-        console.error("Error deleting todo:", error.response?.data || error.message);
-        return false;
-    }
-};
+        const token = getToken();
+        if (!token) {
+            console.error("❌ No token found. Cannot update todo.");
+            return null;
+        }
 
-// Update a To-Do item's completion status
-export const updateTodoStatus = async (id, completed) => {
-    try {
+        console.log("🔄 Updating todo with token:", token, "ID:", id, "Completed:", completed);
+
         const response = await axios.put(
             `${API_BASE_URL}/todos/${id}`,
-            { completed }, // Updating completion status
+            { completed },
             {
                 headers: {
-                    Authorization: `Bearer ${getToken()}`,
+                    Authorization: `Bearer ${token}`,
                     "Content-Type": "application/json"
                 }
             }
         );
+
+        console.log("✅ Updated todo:", response.data);
         return response.data;
     } catch (error) {
-        console.error("Error updating todo:", error.response?.data || error.message);
+        console.error("❌ Error updating todo:", error.response?.data || error.message);
+        return null;
+    }
+};
+
+// Delete a To-Do item
+export const deleteTodo = async (id) => {
+    try {
+        const token = getToken();
+        if (!token) {
+            console.error("❌ No token found. Cannot delete todo.");
+            return null;
+        }
+
+        console.log("🗑️ Deleting todo with token:", token, "ID:", id);
+
+        const response = await axios.delete(`${API_BASE_URL}/todos/${id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        console.log("✅ Deleted todo:", response.data);
+        return response.data;
+    } catch (error) {
+        console.error("❌ Error deleting todo:", error.response?.data || error.message);
         return null;
     }
 };
